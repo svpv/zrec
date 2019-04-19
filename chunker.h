@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Alexey Tourbin
+// Copyright (c) 2018, 2019 Alexey Tourbin
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,15 +19,20 @@
 // SOFTWARE.
 
 #include <stdint.h>
-#include <stdbool.h>
 
-// Chunker works as a buffer and as a queue: you feed him records,
-// and he pops back chunks (records concatenated in its internal buffer).
-struct chunker *chunker_new(
-	bool (*gotChunk)(void *p, size_t size, void *arg, const char *err[2]),
-	void *arg);
+#pragma GCC visibility push(hidden)
+
+// A chunker tells you how to group records into chunks.
+struct chunker *chunker_new(void);
 void chunker_free(struct chunker *C);
 
-bool chunker_addRec(struct chunker *C, void *p, size_t size,
-		    uint64_t nameHash, const char *err[2]);
-bool chunker_flush(struct chunker *C, const char *err[2]);
+// Feed a record to the chunker.  For the purpose of chunking, a record
+// is represented with its nameHash (see a detailed comment in enc.h).
+// Returns 0 when the current chunk is still being cooked.  Otherwise
+// returns 2..8, indicating the number of records in the cooked-up chunk.
+unsigned chunker_add(struct chunker *C, uint64_t nameHash);
+
+// When all records are added, call flush repeatedly until it returns 0.
+unsigned chunker_flush(struct chunker *C);
+
+#pragma GCC visibility pop
